@@ -69,3 +69,14 @@ exports.updateRequestStatus = async (req, res) => {
     res.status(500).json({ message: 'Failed to update request', error: err.message });
   }
 };
+
+// Get sponsorship requests submitted by the logged-in user
+exports.getMyRequests = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const requests = await SponsorshipRequest.find({ member: userId }).populate('event', 'title');
+    res.json({ success: true, requests });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch requests', error: err.message });
+  }
+};
