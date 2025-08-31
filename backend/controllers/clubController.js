@@ -1,3 +1,12 @@
+// Get all clubs (public)
+exports.getAllClubs = async (req, res) => {
+  try {
+    const clubs = await Club.find({}, 'name _id');
+    res.json({ success: true, clubs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch clubs', error: error.message });
+  }
+};
 const Club = require('../models/Club');
 const User = require('../models/User');
 const path = require('path');
@@ -631,23 +640,18 @@ exports.getVolunteers = async (req, res) => {
 // Delete event (club admin only)
 exports.deleteEvent = async (req, res) => {
   try {
-    const clubId = req.params.clubId;
-    const eventId = req.params.eventId;
-    const userId = req.user.id;
-
+    const { clubId, eventId } = req.params;
     const club = await Club.findById(clubId);
     if (!club) return res.status(404).json({ message: 'Club not found' });
 
-    // Only club admin (officer) can delete
-    if (!club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
+    const initialLength = club.events.length;
+    club.events = club.events.filter(e => e._id.toString() !== eventId);
+    if (club.events.length === initialLength) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
 
-    const event = club.events.id(eventId);
-    if (!event) return res.status(404).json({ message: 'Event not found' });
-
-    event.remove();
     await club.save();
-
-    res.json({ success: true, message: 'Event deleted' });
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete event', error: error.message });
   }

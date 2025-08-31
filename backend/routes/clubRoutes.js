@@ -57,6 +57,6 @@ router.post('/:clubId/contact', authMiddleware, clubController.addContact);
 router.get('/:clubId/contacts', authMiddleware, clubController.getContactDirectory);
 router.put('/:clubId/contact/:contactId', authMiddleware, clubController.editContact);
 router.delete('/:clubId/contact/:contactId', authMiddleware, clubController.deleteContact);
-
+router.get('/', clubController.getAllClubs);
 
 module.exports = router;

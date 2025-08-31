@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
@@ -11,15 +12,19 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 
 app.get('/', (req, res) => {
-  res.send('Welcome to CampusOrbit backend API');
+  res.send('Welcome to ClubSphere backend API');
 });
 
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/club', require('./routes/clubRoutes'));
 app.use('/api/user', require('./routes/userRoutes'));
+
+app.use('/api/events', require('./routes/mainEventRoutes'));
+app.use('/api/sponsorship', require('./routes/sponsorshipRoutes'));
 
 const PORT = process.env.PORT || 5000;
 
