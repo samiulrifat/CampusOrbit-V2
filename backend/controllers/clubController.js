@@ -516,32 +516,49 @@ exports.deleteResource = async (req, res) => {
   try {
     const clubId = req.params.clubId;
     const resourceId = req.params.resourceId;
-    const userId = req.user.id;
+    const currentUserId = req.user.id;
 
-    const club = await Club.findById(clubId);
-    if (!club) return res.status(404).json({ message: 'Club not found' });
+    const clubDoc = await Club.findById(clubId);
+    if (!clubDoc) {
+      console.error('Club not found:', clubId);
+      return res.status(404).json({ message: 'Club not found' });
+    }
 
-    const resource = club.resources.id(resourceId);
-    if (!resource) return res.status(404).json({ message: 'Resource not found' });
+    const resource = clubDoc.resources.id(resourceId);
+    if (!resource) {
+      console.error('Resource not found:', resourceId);
+      return res.status(404).json({ message: 'Resource not found' });
+    }
 
     // Only uploader or club admin can delete
-    if (resource.uploader.toString() !== userId && !club.officers.includes(userId)) {
+    if (resource.uploader.toString() !== currentUserId && !clubDoc.officers.includes(currentUserId)) {
+      console.error('Not authorized to delete resource:', currentUserId);
       return res.status(403).json({ message: 'Not authorized' });
     }
 
     // Delete uploaded file from server if file type
     if (resource.type === 'file' && resource.fileUrl) {
-      const filePath = path.join(__dirname, '../public', resource.fileUrl);
+      const filename = resource.fileUrl.split('/').pop();
+      const filePath = path.join(__dirname, '../uploads', filename);
+      console.log('Attempting to delete file:', filePath);
       fs.unlink(filePath, (err) => {
-        if (err) console.error('Failed to delete file:', err);
+        if (err && err.code !== 'ENOENT') {
+          console.error('Failed to delete file:', filePath, err);
+        } else if (err && err.code === 'ENOENT') {
+          console.warn('File not found, skipping deletion:', filePath);
+        } else {
+          console.log('File deleted:', filePath);
+        }
       });
     }
 
-    resource.remove();
-    await club.save();
+    // Remove resource from array (replace .remove())
+    clubDoc.resources = clubDoc.resources.filter(r => r._id.toString() !== resourceId);
+    await clubDoc.save();
 
     res.json({ success: true, message: 'Resource deleted' });
   } catch (error) {
+    console.error('Delete resource error:', error);
     res.status(500).json({ message: 'Failed to delete resource', error: error.message });
   }
 };
@@ -956,4 +973,15 @@ exports.deleteContact = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete contact', error: error.message });
   }
+};
+
+// Download resource file
+exports.downloadResource = async (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(__dirname, '../uploads', filename);
+  res.download(filePath, filename, err => {
+    if (err) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+  });
 };

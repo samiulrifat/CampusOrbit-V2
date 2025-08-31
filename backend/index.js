@@ -25,6 +25,7 @@ app.use('/api/user', require('./routes/userRoutes'));
 
 app.use('/api/events', require('./routes/mainEventRoutes'));
 app.use('/api/sponsorship', require('./routes/sponsorshipRoutes'));
+app.use('/api/tasks', require('./routes/taskRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

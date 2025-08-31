@@ -36,6 +36,7 @@ router.post(
 );
 router.get('/:clubId/resources', authMiddleware, clubController.getResources);
 router.delete('/:clubId/resource/:resourceId', authMiddleware, clubController.deleteResource);
+router.get('/:clubId/resource/:filename/download', clubController.downloadResource);
 
 router.post('/:clubId/event', authMiddleware, clubController.createEvent);
 router.get('/:clubId/event', authMiddleware, clubController.getEvents);
