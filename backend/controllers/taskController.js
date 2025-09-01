@@ -21,7 +21,7 @@ exports.assignTask = async (req, res) => {
   await Notification.create({
     user: memberId,
     type: 'task-assigned',
-    message: `You have been assigned a new task in club "${clubId}"`,
+    message: `You have been assigned a new task in club "${club.name}"`,
     relatedClub: clubId,
     relatedTask: task._id
   });

@@ -59,7 +59,7 @@ exports.editEvent = async (req, res) => {
       await Notification.create({
         user: attendeeId,
         type: 'event-edited',
-        message: `Event "${event.name}" has been updated. Check details for changes.`,
+        message: `Event "${event.title}" has been updated. Check details for changes.`,
         relatedEvent: event._id
       });
     }
