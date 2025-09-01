@@ -53,6 +53,16 @@ exports.editEvent = async (req, res) => {
     if (!club || !club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
     Object.assign(event, updates);
     await event.save();
+    // Notify all RSVP'ed attendees
+    const Notification = require('../models/Notification');
+    for (const attendeeId of event.attendees) {
+      await Notification.create({
+        user: attendeeId,
+        type: 'event-edited',
+        message: `Event "${event.name}" has been updated. Check details for changes.`,
+        relatedEvent: event._id
+      });
+    }
     res.json({ success: true, event });
   } catch (err) {
     res.status(500).json({ message: 'Failed to edit event', error: err.message });
@@ -150,6 +160,18 @@ exports.uploadPhoto = async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const photoUrl = `/uploads/${req.file.filename}`;
     event.gallery.push({ uploader: userId, photoUrl });
+    // Notify all attendees and event creator
+    const Notification = require('../models/Notification');
+    const notifyUsers = new Set(event.attendees.map(id => id.toString()));
+    notifyUsers.add(event.createdBy.toString());
+    for (const notifyId of notifyUsers) {
+      await Notification.create({
+        user: notifyId,
+        type: 'gallery-photo',
+        message: `A new photo was uploaded to the gallery for event "${event.name}"`,
+        relatedEvent: event._id
+      });
+    }
     await event.save();
     res.status(201).json({ success: true, photoUrl });
   } catch (err) {

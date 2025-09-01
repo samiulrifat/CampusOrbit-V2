@@ -90,7 +90,14 @@ exports.inviteMember = async (req, res) => {
     user.clubsInvited.push(club._id);
     await user.save();
 
-    // (Optional) Send notification/email here
+    // Create notification for invited user
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      user: user._id,
+      type: 'invitation',
+      message: `You have been invited to join the club "${club.name}"`,
+      relatedClub: club._id
+    });
 
     res.json({ success: true, message: 'Invitation sent' });
   } catch (error) {
@@ -120,6 +127,17 @@ exports.acceptInvitation = async (req, res) => {
     user.clubsJoined.push(clubId);
     await user.save();
 
+    // Notify club admin(s)
+    const Notification = require('../models/Notification');
+    const clubAdmins = club.officers;
+    for (const adminId of clubAdmins) {
+      await Notification.create({
+        user: adminId,
+        type: 'invitation-accepted',
+        message: `${user.name} has accepted your invitation to join "${club.name}"`,
+        relatedClub: club._id
+      });
+    }
     res.json({ success: true, message: 'Invitation accepted' });
   } catch (error) {
     res.status(500).json({ message: 'Error accepting invitation', error: error.message });
@@ -214,6 +232,17 @@ exports.addAnnouncement = async (req, res) => {
     club.announcements.unshift(newAnnouncement); // Add new announcement at the start
     await club.save();
 
+    // Notify all club members
+    const Notification = require('../models/Notification');
+    const memberIds = club.members;
+    for (const memberId of memberIds) {
+      await Notification.create({
+        user: memberId,
+        type: 'announcement',
+        message: `New announcement in "${club.name}": ${title}`,
+        relatedClub: club._id
+      });
+    }
     res.status(201).json({ success: true, announcement: newAnnouncement });
   } catch (error) {
     res.status(500).json({ message: 'Failed to add announcement', error: error.message });
@@ -301,6 +330,16 @@ exports.createMeeting = async (req, res) => {
     club.meetings.push(newMeeting);
     await club.save();
 
+    // Notify invited members
+    const Notification = require('../models/Notification');
+    for (const memberId of invitedMembers) {
+      await Notification.create({
+        user: memberId,
+        type: 'meeting-invite',
+        message: `You have been invited to a meeting in "${club.name}": ${title}`,
+        relatedClub: club._id
+      });
+    }
     res.status(201).json({ success: true, meeting: newMeeting });
   } catch (error) {
     res.status(500).json({ message: 'Could not create meeting', error: error.message });
@@ -371,6 +410,17 @@ exports.createPoll = async (req, res) => {
     club.polls.push(newPoll);
     await club.save();
 
+    // Notify all club members
+    const Notification = require('../models/Notification');
+    const memberIds = club.members;
+    for (const memberId of memberIds) {
+      await Notification.create({
+        user: memberId,
+        type: 'poll',
+        message: `A new poll has been created in "${club.name}": ${question}`,
+        relatedClub: club._id
+      });
+    }
     res.status(201).json({ success: true, poll: newPoll });
   } catch (error) {
     res.status(500).json({ message: 'Failed to create poll', error: error.message });
@@ -485,6 +535,17 @@ exports.uploadResource = async (req, res) => {
     club.resources.unshift(newResource);
     await club.save();
 
+    // Notify all club members
+    const Notification = require('../models/Notification');
+    const memberIds = club.members;
+    for (const memberId of memberIds) {
+      await Notification.create({
+        user: memberId,
+        type: 'resource-upload',
+        message: `A new resource has been uploaded in "${club.name}": ${title}`,
+        relatedClub: club._id
+      });
+    }
     res.status(201).json({ success: true, resource: newResource });
   } catch (error) {
     res.status(500).json({ message: 'Failed to upload resource', error: error.message });
@@ -579,6 +640,18 @@ exports.createEvent = async (req, res) => {
     club.events.unshift(newEvent);
     await club.save();
 
+    // Notify all club members
+    const Notification = require('../models/Notification');
+    const memberIds = club.members;
+    for (const memberId of memberIds) {
+      await Notification.create({
+        user: memberId,
+        type: 'event-volunteers',
+        message: `A new event in "${club.name}" needs volunteers: ${name}`,
+        relatedClub: club._id,
+        relatedEvent: newEvent._id
+      });
+    }
     res.status(201).json({ success: true, event: newEvent });
   } catch (err) {
     res.status(500).json({ message: 'Failed to create event', error: err.message });
@@ -627,6 +700,17 @@ exports.signupVolunteer = async (req, res) => {
 
     await club.save();
 
+    // Notify club admin(s)
+    const Notification = require('../models/Notification');
+    for (const adminId of club.officers) {
+      await Notification.create({
+        user: adminId,
+        type: 'volunteer-signup',
+        message: `A member has signed up as volunteer for event "${event.name}" in "${club.name}"`,
+        relatedClub: club._id,
+        relatedEvent: event._id
+      });
+    }
     res.json({ success: true, message: 'Signed up as volunteer' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to sign up', error: err.message });
@@ -783,6 +867,15 @@ exports.awardAchievement = async (req, res) => {
 
     await club.save();
 
+    // Notify awarded member
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      user: memberId,
+      type: 'achievement-awarded',
+      message: `You have been awarded an achievement in "${club.name}"`,
+      relatedClub: club._id,
+      relatedAchievement: achievementId
+    });
     res.json({ success: true, message: 'Achievement awarded' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to award achievement', error: error.message });
@@ -858,6 +951,16 @@ exports.submitFeedback = async (req, res) => {
 
     await club.save();
 
+    // Notify club admin(s)
+    const Notification = require('../models/Notification');
+    for (const adminId of club.officers) {
+      await Notification.create({
+        user: adminId,
+        type: 'feedback',
+        message: `A member has submitted feedback in "${club.name}"`,
+        relatedClub: club._id
+      });
+    }
     res.json({ success: true, message: 'Feedback submitted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to submit feedback', error: error.message });

@@ -15,6 +15,17 @@ exports.assignTask = async (req, res) => {
   const task = new Task({ club: clubId, assignedTo: memberId, assignedBy: adminId, description });
   await task.save();
   const populatedTask = await Task.findById(task._id).populate('assignedTo', 'name email').populate('assignedBy', 'name email');
+
+  // Notify assigned member
+  const Notification = require('../models/Notification');
+  await Notification.create({
+    user: memberId,
+    type: 'task-assigned',
+    message: `You have been assigned a new task in club "${clubId}"`,
+    relatedClub: clubId,
+    relatedTask: task._id
+  });
+
   res.status(201).json({ success: true, task: populatedTask });
   } catch (err) {
     res.status(500).json({ message: 'Failed to assign task', error: err.message });
@@ -49,6 +60,15 @@ exports.markTaskComplete = async (req, res) => {
     task.updatedAt = new Date();
   await task.save();
   const populatedTask = await Task.findById(task._id).populate('assignedTo', 'name email').populate('assignedBy', 'name email');
+  // Notify assigned member
+  const Notification = require('../models/Notification');
+  await Notification.create({
+    user: task.assignedTo,
+    type: 'task-completed',
+    message: `Your assigned task in club "${club.name}" has been marked as completed`,
+    relatedClub: club._id,
+    relatedTask: task._id
+  });
   res.json({ success: true, task: populatedTask });
   } catch (err) {
     res.status(500).json({ message: 'Failed to mark complete', error: err.message });

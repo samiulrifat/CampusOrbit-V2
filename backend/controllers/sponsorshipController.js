@@ -23,6 +23,16 @@ exports.submitRequest = async (req, res) => {
       coverLetter
     });
     await request.save();
+    // Notify club admin(s)
+    const Notification = require('../models/Notification');
+    for (const adminId of event.club.officers) {
+      await Notification.create({
+        user: adminId,
+        type: 'sponsorship-request',
+        message: `A member has submitted a sponsorship request for event "${event.title}"`,
+        relatedEvent: event._id
+      });
+    }
     res.status(201).json({ success: true, request });
   } catch (err) {
     res.status(500).json({ message: 'Failed to submit request', error: err.message });
@@ -64,6 +74,14 @@ exports.updateRequestStatus = async (req, res) => {
     }
     request.status = status;
     await request.save();
+    // Notify member
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      user: request.member,
+      type: 'sponsorship-response',
+      message: `Your sponsorship request for event "${request.event.title}" was ${request.status}.`,
+      relatedEvent: request.event._id
+    });
     res.json({ success: true, request });
   } catch (err) {
     res.status(500).json({ message: 'Failed to update request', error: err.message });
