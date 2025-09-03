@@ -69,28 +69,23 @@ exports.inviteMember = async (req, res) => {
     const { email } = req.body;
     const userId = req.user.id;
 
-    // Find club, check if current user is officer
     const club = await Club.findById(clubId);
     if (!club) return res.status(404).json({ message: 'Club not found' });
     if (!club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
 
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Check if already member or invited
     if (club.members.includes(user._id)) return res.status(400).json({ message: 'User already a member' });
     if (club.invitations.includes(user._id)) return res.status(400).json({ message: 'User already invited' });
 
-    // Add to invitations
     club.invitations.push(user._id);
     await club.save();
 
-    // Add to user's invited clubs
     user.clubsInvited.push(club._id);
     await user.save();
 
-    // Create notification for invited user
+
     const Notification = require('../models/Notification');
     await Notification.create({
       user: user._id,
@@ -215,7 +210,7 @@ exports.getUserInvitations = async (req, res) => {
   }
 };
 
-// Add announcement (club admin only)
+
 exports.addAnnouncement = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -225,14 +220,12 @@ exports.addAnnouncement = async (req, res) => {
     const club = await Club.findById(clubId);
     if (!club) return res.status(404).json({ message: 'Club not found' });
 
-    // Check if user is an officer for this club
     if (!club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
 
     const newAnnouncement = { title, content, date: new Date() };
-    club.announcements.unshift(newAnnouncement); // Add new announcement at the start
+    club.announcements.unshift(newAnnouncement); 
     await club.save();
 
-    // Notify all club members
     const Notification = require('../models/Notification');
     const memberIds = club.members;
     for (const memberId of memberIds) {
@@ -307,7 +300,6 @@ exports.getActivityLog = async (req, res) => {
   }
 };
 
-// Create meeting (club admin only)
 exports.createMeeting = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -330,7 +322,7 @@ exports.createMeeting = async (req, res) => {
     club.meetings.push(newMeeting);
     await club.save();
 
-    // Notify invited members
+
     const Notification = require('../models/Notification');
     for (const memberId of invitedMembers) {
       await Notification.create({
@@ -346,7 +338,6 @@ exports.createMeeting = async (req, res) => {
   }
 };
 
-// Get meetings user can access (member of club)
 exports.getMeetings = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -365,7 +356,6 @@ exports.getMeetings = async (req, res) => {
   }
 };
 
-// Mark attendance (member marking own attendance)
 exports.markAttendance = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -390,12 +380,11 @@ exports.markAttendance = async (req, res) => {
   }
 };
 
-// Create poll (club admin)
 exports.createPoll = async (req, res) => {
   try {
     const clubId = req.params.clubId;
     const userId = req.user.id;
-    const { question, options } = req.body; // options: array of strings
+    const { question, options } = req.body; 
 
     const club = await Club.findById(clubId);
     if (!club) return res.status(404).json({ message: 'Club not found' });
@@ -410,7 +399,7 @@ exports.createPoll = async (req, res) => {
     club.polls.push(newPoll);
     await club.save();
 
-    // Notify all club members
+
     const Notification = require('../models/Notification');
     const memberIds = club.members;
     for (const memberId of memberIds) {
@@ -427,7 +416,6 @@ exports.createPoll = async (req, res) => {
   }
 };
 
-// Get polls for club (members)
 exports.getPolls = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -445,7 +433,6 @@ exports.getPolls = async (req, res) => {
   }
 };
 
-// Vote on poll option (member)
 exports.votePoll = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -461,12 +448,10 @@ exports.votePoll = async (req, res) => {
     const poll = club.polls.id(pollId);
     if (!poll) return res.status(404).json({ message: 'Poll not found' });
 
-    // Remove vote from any other option of this poll by user
     poll.options.forEach((option) => {
       option.votes = option.votes.filter((voterId) => voterId.toString() !== userId);
     });
 
-    // Add vote to selected option
     poll.options[optionIndex].votes.push(userId);
 
     await club.save();
@@ -477,12 +462,35 @@ exports.votePoll = async (req, res) => {
   }
 };
 
-// Edit poll and options (club admin)
 exports.editPoll = async (req, res) => {
-  // similar pattern - locate poll by id, check auth, update question/options, save
+  try {
+    const clubId = req.params.clubId;
+    const pollId = req.params.pollId;
+    const userId = req.user.id;
+    const updates = req.body;
+
+    const club = await Club.findById(clubId);
+    if (!club) return res.status(404).json({ message: 'Club not found' });
+    if (!club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
+
+    const poll = club.polls.id(pollId);
+    if (!poll) return res.status(404).json({ message: 'Poll not found' });
+
+    if (updates.question) poll.question = updates.question;
+    if (Array.isArray(updates.options)) {
+      poll.options = updates.options.map((opt, idx) => ({
+        text: typeof opt.text === 'string' ? opt.text : '',
+        votes: poll.options[idx] ? poll.options[idx].votes : []
+      }));
+    }
+
+    await club.save();
+    res.json({ success: true, poll });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to edit poll', error: error.message });
+  }
 };
 
-// Delete poll (club admin)
 exports.deletePoll = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -502,7 +510,6 @@ exports.deletePoll = async (req, res) => {
   }
 };
 
-// Upload resource (file or link)
 exports.uploadResource = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -512,14 +519,12 @@ exports.uploadResource = async (req, res) => {
     const club = await Club.findById(clubId);
     if (!club) return res.status(404).json({ message: 'Club not found' });
 
-    // Check if user is member or officer of club
     const isMember = club.members.includes(userId) || club.officers.includes(userId);
     if (!isMember) return res.status(403).json({ message: 'Not authorized' });
 
     let fileUrl = '';
     if (type === 'file') {
       if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-      // Assume file is uploaded using multer or similar middleware
       fileUrl = `/uploads/${req.file.filename}`;
     }
 
@@ -535,7 +540,6 @@ exports.uploadResource = async (req, res) => {
     club.resources.unshift(newResource);
     await club.save();
 
-    // Notify all club members
     const Notification = require('../models/Notification');
     const memberIds = club.members;
     for (const memberId of memberIds) {
@@ -552,7 +556,6 @@ exports.uploadResource = async (req, res) => {
   }
 };
 
-// Get all resources for club
 exports.getResources = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -561,7 +564,6 @@ exports.getResources = async (req, res) => {
     const club = await Club.findById(clubId).populate('resources.uploader', 'name email');
     if (!club) return res.status(404).json({ message: 'Club not found' });
 
-    // Authorization: must be member or officer
     if (!(club.members.includes(userId) || club.officers.includes(userId))) {
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -572,7 +574,6 @@ exports.getResources = async (req, res) => {
   }
 };
 
-// Delete resource
 exports.deleteResource = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -590,14 +591,11 @@ exports.deleteResource = async (req, res) => {
       console.error('Resource not found:', resourceId);
       return res.status(404).json({ message: 'Resource not found' });
     }
-
-    // Only uploader or club admin can delete
     if (resource.uploader.toString() !== currentUserId && !clubDoc.officers.includes(currentUserId)) {
       console.error('Not authorized to delete resource:', currentUserId);
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // Delete uploaded file from server if file type
     if (resource.type === 'file' && resource.fileUrl) {
       const filename = resource.fileUrl.split('/').pop();
       const filePath = path.join(__dirname, '../uploads', filename);
@@ -738,7 +736,6 @@ exports.getVolunteers = async (req, res) => {
   }
 };
 
-// Delete event (club admin only)
 exports.deleteEvent = async (req, res) => {
   try {
     const { clubId, eventId } = req.params;
@@ -758,7 +755,6 @@ exports.deleteEvent = async (req, res) => {
   }
 };
 
-// Create achievement (admin only)
 exports.createAchievement = async (req, res) => {
   try {
     const { title, badgeUrl, description } = req.body;
@@ -780,7 +776,6 @@ exports.createAchievement = async (req, res) => {
   }
 };
 
-// Edit achievement (admin only)
 exports.editAchievement = async (req, res) => {
   try {
     const clubId = req.params.clubId;
@@ -1078,7 +1073,6 @@ exports.deleteContact = async (req, res) => {
   }
 };
 
-// Download resource file
 exports.downloadResource = async (req, res) => {
   const { filename } = req.params;
   const filePath = path.join(__dirname, '../uploads', filename);

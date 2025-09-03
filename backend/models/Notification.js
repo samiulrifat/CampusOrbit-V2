@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { type: String, required: true }, // e.g. 'invitation', 'announcement', 'task', etc.
+  type: { type: String, required: true }, 
   message: { type: String, required: true },
-  link: { type: String }, // optional: link to related page
+  link: { type: String }, 
   relatedClub: { type: mongoose.Schema.Types.ObjectId, ref: 'Club' },
   relatedEvent: { type: mongoose.Schema.Types.ObjectId },
   relatedTask: { type: mongoose.Schema.Types.ObjectId },

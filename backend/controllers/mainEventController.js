@@ -1,4 +1,3 @@
-// Get events hosted by clubs the user has joined
 exports.getEventsOfJoinedClubs = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -24,12 +23,10 @@ const MainEvent = require('../models/MainEvent');
 const Club = require('../models/Club');
 const User = require('../models/User');
 
-// Create main event (club admin only)
 exports.createEvent = async (req, res) => {
   try {
     const { title, description, date, location, clubId } = req.body;
     const userId = req.user.id;
-    // Check club admin
     const club = await Club.findById(clubId);
     if (!club) return res.status(404).json({ message: 'Club not found' });
     if (!club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
@@ -41,7 +38,6 @@ exports.createEvent = async (req, res) => {
   }
 };
 
-// Edit main event (club admin only)
 exports.editEvent = async (req, res) => {
   try {
     const eventId = req.params.eventId;
@@ -53,7 +49,7 @@ exports.editEvent = async (req, res) => {
     if (!club || !club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
     Object.assign(event, updates);
     await event.save();
-    // Notify all RSVP'ed attendees
+
     const Notification = require('../models/Notification');
     for (const attendeeId of event.attendees) {
       await Notification.create({
@@ -85,7 +81,6 @@ exports.deleteEvent = async (req, res) => {
   }
 };
 
-// Get all main events (public)
 exports.getAllEvents = async (req, res) => {
   try {
     const events = await MainEvent.find().populate('club', 'name').populate('createdBy', 'name');
@@ -95,7 +90,6 @@ exports.getAllEvents = async (req, res) => {
   }
 };
 
-// Get main events by club admin
 exports.getMyEvents = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -106,7 +100,6 @@ exports.getMyEvents = async (req, res) => {
   }
 };
 
-// Get single event details (public)
 exports.getEventDetails = async (req, res) => {
   try {
     const eventId = req.params.eventId;
@@ -118,7 +111,6 @@ exports.getEventDetails = async (req, res) => {
   }
 };
 
-// RSVP to event (any user)
 exports.rsvpEvent = async (req, res) => {
   try {
     const eventId = req.params.eventId;
@@ -134,7 +126,6 @@ exports.rsvpEvent = async (req, res) => {
   }
 };
 
-// Get attendee list (club admin only)
 exports.getAttendees = async (req, res) => {
   try {
     const eventId = req.params.eventId;
@@ -149,7 +140,6 @@ exports.getAttendees = async (req, res) => {
   }
 };
 
-// Upload photo to gallery (attendee only)
 exports.uploadPhoto = async (req, res) => {
   try {
     const eventId = req.params.eventId;
@@ -160,7 +150,6 @@ exports.uploadPhoto = async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const photoUrl = `/uploads/${req.file.filename}`;
     event.gallery.push({ uploader: userId, photoUrl });
-    // Notify all attendees and event creator
     const Notification = require('../models/Notification');
     const notifyUsers = new Set(event.attendees.map(id => id.toString()));
     notifyUsers.add(event.createdBy.toString());
@@ -179,7 +168,6 @@ exports.uploadPhoto = async (req, res) => {
   }
 };
 
-// Get gallery photos (public)
 exports.getGallery = async (req, res) => {
   try {
     const eventId = req.params.eventId;
@@ -191,7 +179,6 @@ exports.getGallery = async (req, res) => {
   }
 };
 
-// Delete photo from gallery (club admin only)
 exports.deletePhoto = async (req, res) => {
   try {
     const eventId = req.params.eventId;
