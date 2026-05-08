@@ -12,6 +12,9 @@ exports.getEventsOfJoinedClubs = async (req, res) => {
     const events = await MainEvent.find(query)
       .populate('club', 'name')
       .populate('createdBy', 'name');
+    if (events.find(entry => !entry.hasValidMac())) {
+      return res.status(400).json({ success: false, message: 'Event integrity check failed' });
+    }
     console.log('Events found:', events);
     res.json({ success: true, events });
   } catch (err) {
@@ -84,6 +87,9 @@ exports.deleteEvent = async (req, res) => {
 exports.getAllEvents = async (req, res) => {
   try {
     const events = await MainEvent.find().populate('club', 'name').populate('createdBy', 'name');
+    if (events.find(entry => !entry.hasValidMac())) {
+      return res.status(400).json({ success: false, message: 'Event integrity check failed' });
+    }
     res.json({ success: true, events });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch events', error: err.message });
@@ -94,6 +100,9 @@ exports.getMyEvents = async (req, res) => {
   try {
     const userId = req.user.id;
     const events = await MainEvent.find({ createdBy: userId }).populate('club', 'name');
+    if (events.find(entry => !entry.hasValidMac())) {
+      return res.status(400).json({ success: false, message: 'Event integrity check failed' });
+    }
     res.json({ success: true, events });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch events', error: err.message });
@@ -105,6 +114,9 @@ exports.getEventDetails = async (req, res) => {
     const eventId = req.params.eventId;
     const event = await MainEvent.findById(eventId).populate('club', 'name').populate('createdBy', 'name');
     if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!event.hasValidMac()) {
+      return res.status(400).json({ success: false, message: 'Event integrity check failed' });
+    }
     res.json({ success: true, event });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch event', error: err.message });

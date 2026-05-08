@@ -11,6 +11,7 @@ const Club = require('../models/Club');
 const User = require('../models/User');
 const path = require('path');
 const fs = require('fs');
+const { encryptText } = require('../utils/keymanager');
 
 exports.createClub = async (req, res) => {
   try {
@@ -73,7 +74,7 @@ exports.inviteMember = async (req, res) => {
     if (!club) return res.status(404).json({ message: 'Club not found' });
     if (!club.officers.includes(userId)) return res.status(403).json({ message: 'Not authorized' });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: encryptText(email) });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (club.members.includes(user._id)) return res.status(400).json({ message: 'User already a member' });

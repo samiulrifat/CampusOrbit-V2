@@ -41,6 +41,9 @@ exports.getClubTasks = async (req, res) => {
     if (!club) return res.status(404).json({ message: 'Club not found' });
     if (!club.officers.includes(adminId)) return res.status(403).json({ message: 'Not authorized' });
     const tasks = await Task.find({ club: clubId }).populate('assignedTo', 'name email').populate('assignedBy', 'name email');
+    if (tasks.find(entry => !entry.hasValidMac())) {
+      return res.status(400).json({ success: false, message: 'Task integrity check failed' });
+    }
     res.json({ success: true, tasks });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch tasks', error: err.message });
@@ -80,6 +83,9 @@ exports.getMyTasks = async (req, res) => {
   try {
     const userId = req.user.id;
     const tasks = await Task.find({ assignedTo: userId }).populate('club', 'name');
+    if (tasks.find(entry => !entry.hasValidMac())) {
+      return res.status(400).json({ success: false, message: 'Task integrity check failed' });
+    }
     res.json({ success: true, tasks });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch tasks', error: err.message });

@@ -7,6 +7,10 @@ const Notification = require('../models/Notification');
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const notifications = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const tampered = notifications.find(entry => !entry.hasValidMac());
+    if (tampered) {
+      return res.status(400).json({ success: false, message: 'Notification integrity check failed' });
+    }
     res.json({ success: true, notifications });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch notifications', error: error.message });

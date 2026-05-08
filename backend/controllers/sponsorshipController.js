@@ -53,6 +53,9 @@ exports.getRequestsForEvent = async (req, res) => {
     const requests = await SponsorshipRequest.find({ event: eventId })
       .populate('member', 'name email')
       .sort({ createdAt: -1 });
+    if (requests.find(entry => !entry.hasValidMac())) {
+      return res.status(400).json({ success: false, message: 'Sponsorship request integrity check failed' });
+    }
     res.json({ success: true, requests });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch requests', error: err.message });
@@ -93,6 +96,9 @@ exports.getMyRequests = async (req, res) => {
   try {
     const userId = req.user.id;
     const requests = await SponsorshipRequest.find({ member: userId }).populate('event', 'title');
+    if (requests.find(entry => !entry.hasValidMac())) {
+      return res.status(400).json({ success: false, message: 'Sponsorship request integrity check failed' });
+    }
     res.json({ success: true, requests });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch requests', error: err.message });

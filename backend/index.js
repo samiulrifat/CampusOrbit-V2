@@ -4,10 +4,15 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const notificationRoutes = require('./routes/notificationRoutes');
+const keyRoutes = require('./routes/keyRoutes');
+const { bootstrapKeysIfMissing } = require('./controllers/keyController');
 const app = express();
 
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(()=>console.log('MongoDB connected'))
+  .then(async () => {
+    console.log('MongoDB connected');
+    await bootstrapKeysIfMissing();
+  })
   .catch(err => console.error('MongoDB connection failed', err));
 
 app.use(cors());
@@ -27,6 +32,7 @@ app.use('/api/events', require('./routes/mainEventRoutes'));
 app.use('/api/sponsorship', require('./routes/sponsorshipRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/keys', keyRoutes);
 
 const PORT = process.env.PORT || 5000;
 
