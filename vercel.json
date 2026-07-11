@@ -1,6 +1,5 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "installCommand": "npm install --prefix frontend",
-  "outputDirectory": "frontend/build",
-  "devCommand": "cd frontend && npm start"
+  "buildCommand": "npm install --legacy-peer-deps --prefix frontend && npm run build --prefix frontend",
+  "installCommand": "npm install --legacy-peer-deps --prefix frontend",
+  "outputDirectory": "frontend/build"
 }
